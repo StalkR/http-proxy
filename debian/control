@@ -1,0 +1,14 @@
+Source: http-proxy
+Section: net
+Priority: extra
+Maintainer: StalkR <stalkr@stalkr.net>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Homepage: https://github.com/StalkR/http-proxy
+
+Package: http-proxy
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: HTTP proxy
+ A simple HTTP proxy in Go, no caching.
+ Supports HTTP and CONNECT method for HTTPS & HTTP/2.
