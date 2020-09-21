@@ -18,6 +18,7 @@ DAEMON=/usr/bin/$NAME
 DAEMON_ARGS=""
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
+USER=proxy
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
@@ -42,10 +43,12 @@ do_start()
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
 	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON \
+		--chuid $USER --user $USER \
 		--test > /dev/null \
 		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \
-		--exec $DAEMON --background -- $DAEMON_ARGS \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON \
+		--chuid $USER --user $USER \
+		--make-pidfile --background -- $DAEMON_ARGS \
 		|| return 2
 	# Add code here, if necessary, that waits for the process to be ready
 	# to handle requests from services started subsequently which depend
@@ -63,7 +66,7 @@ do_stop()
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
 	start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE \
-		--exec $DAEMON
+		--exec $DAEMON --chuid $USER --user $USER
 	RETVAL="$?"
 	[ "$RETVAL" = 2 ] && return 2
 	# Wait for children to finish too if this is a daemon that forks
@@ -72,7 +75,8 @@ do_stop()
 	# that waits for the process to drop all resources that could be
 	# needed by services started subsequently.  A last resort is to
 	# sleep for some time.
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
+	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 \
+		--exec $DAEMON --chuid $USER --user $USER
 	[ "$?" = 2 ] && return 2
 	# Many daemons don't delete their pidfiles when they exit.
 	rm -f $PIDFILE
