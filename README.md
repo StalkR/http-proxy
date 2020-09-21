@@ -5,7 +5,7 @@
 A simple HTTP proxy in Go, no caching.
 Supports HTTP and CONNECT method for HTTPS & HTTP/2.
 
-It listens on both TCP/UDP IPv4/IPv6 on specified port.
+It listens on TCP IPv4/IPv6 at the specified port.
 
 Example:
 
