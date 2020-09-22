@@ -12,23 +12,51 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 var (
 	flagListen          = flag.String("listen", ":8080", "Address to listen on.")
 	flagAddForwardedFor = flag.Bool("add-forwarded-for", false, "Add client IP to X-Forwarded-For header.")
+	flagProxy           = flag.String("proxy", "", "Use this SOCKS5 proxy for outgoing connections (host:port).")
 )
 
 func main() {
 	flag.Parse()
+
+	var dialer proxy.Dialer = &net.Dialer{
+		Timeout:   10 * time.Second,
+		KeepAlive: 10 * time.Second,
+		DualStack: true,
+	}
+
+	if *flagProxy != "" {
+		d, err := proxy.SOCKS5("tcp", *flagProxy, nil, dialer)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dialer = d
+	}
+
+	transport := &http.Transport{
+		// Both net.Dialer & socks.Dialer implement proxy.ContextDialer.
+		DialContext:           dialer.(proxy.ContextDialer).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	srv := &http.Server{
 		Addr: *flagListen,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodConnect {
-				connect(w, r)
+				connect(w, r, dialer)
 				return
 			}
-			proxy(w, r)
+			proxyHTTP(w, r, transport)
 		}),
 		// Disable direct HTTP/2 because hijacking is not possible.
 		// Fortunately, in practice it works because it uses CONNECT then inside HTTP/2.
@@ -38,8 +66,8 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func connect(w http.ResponseWriter, req *http.Request) {
-	dst, err := net.DialTimeout("tcp", req.Host, 30*time.Second)
+func connect(w http.ResponseWriter, req *http.Request, dialer proxy.Dialer) {
+	dst, err := dialer.Dial("tcp", req.Host)
 	if err != nil {
 		log.Printf("%v %v %v dial error: %v", req.RemoteAddr, req.Method, req.URL, err)
 		http.Error(w, fmt.Sprintf("dial error: %v", err), http.StatusServiceUnavailable)
@@ -69,7 +97,7 @@ func transfer(dst io.WriteCloser, src io.ReadCloser) {
 	io.Copy(dst, src)
 }
 
-func proxy(w http.ResponseWriter, req *http.Request) {
+func proxyHTTP(w http.ResponseWriter, req *http.Request, transport http.RoundTripper) {
 	if *flagAddForwardedFor {
 		clientIP, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
@@ -80,7 +108,7 @@ func proxy(w http.ResponseWriter, req *http.Request) {
 		appendHostToXForwardHeader(req.Header, clientIP)
 	}
 	delHopHeaders(req.Header)
-	resp, err := http.DefaultTransport.RoundTrip(req)
+	resp, err := transport.RoundTrip(req)
 	if err != nil {
 		log.Printf("%v %v %v error sending request: %v", req.RemoteAddr, req.Method, req.URL, err)
 		http.Error(w, fmt.Sprintf("proxy failed: %v", err), http.StatusInternalServerError)

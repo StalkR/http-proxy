@@ -1,4 +1,5 @@
 # Arguments:
 #  -listen <[ip]:port>    default to :8080
 #  -add-forwarded-for     default not set
+#  -proxy <ip:port>       default not set
 DAEMON_ARGS=""
