@@ -1,5 +1,7 @@
 language: go
 
+go: "1.15"
+
 install:
   - go get -t -v ./...
   - go build -v ./...
