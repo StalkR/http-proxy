@@ -1,6 +1,11 @@
 # Simple Go HTTP proxy #
 
-[![Build Status](https://api.travis-ci.org/StalkR/http-proxy.png?branch=master)](https://travis-ci.org/StalkR/http-proxy) [![Godoc](https://godoc.org/github.com/StalkR/http-proxy?status.png)](https://godoc.org/github.com/StalkR/http-proxy)
+[![Build Status][build-img]][build] [![Godoc][godoc-img]][godoc]
+
+[build]: https://github.com/StalkR/http-proxy/actions/workflows/build.yml
+[build-img]: https://github.com/StalkR/http-proxy/actions/workflows/build.yml/badge.svg
+[godoc]: https://godoc.org/github.com/StalkR/http-proxy
+[godoc-img]: https://godoc.org/github.com/StalkR/http-proxy?status.png
 
 A simple HTTP proxy in Go, no caching.
 Supports HTTP and CONNECT method for HTTPS & HTTP/2.
